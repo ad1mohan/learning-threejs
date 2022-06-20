@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import gsap from 'gsap'
 import './style.css'
 
 
@@ -27,7 +28,7 @@ mesh2.position.set(2,-1,0)
 group.add(mesh1)
 group.add(mesh2)
 
-// changing position, scale, rotation, lookAT, reOrder group
+// changing position, scale, rotation, lookAT, reOrder, group
 group.position.set(0.7,-0.6,0)
 group.scale.x=2
 
@@ -48,7 +49,6 @@ const axesHelper =  new THREE.AxesHelper(5);
 scene.add(axesHelper)
 
 camera.lookAt(group.position)
-console.log(group.position)
 
 // Renderer
 const renderer = new THREE.WebGLRenderer({
@@ -57,5 +57,23 @@ const renderer = new THREE.WebGLRenderer({
 // resize renderer
 renderer.setSize(sizes.width,sizes.height)
 
-// makes the camera zoomed in
-renderer.render(scene,camera)
+gsap.to(group.position,{duration:1, delay: 1, x:2})
+gsap.to(group.position,{duration:1, delay: 2, y:0})
+
+// const clock = new THREE.Clock()
+// Animations - tick, requestAnimationFrame, deltaTime, GSAP
+const tick = ()=>{
+    // Clock
+    // const elaspedTime = clock.getElapsedTime()
+    
+    
+    // 1 rev per sec
+    // group.rotation.y=elaspedTime * Math.PI * 2
+    // group.position.x = Math.cos(elaspedTime)
+    // group.position.y = Math.sin(elaspedTime)
+    // camera.lookAt(group.position)
+    renderer.render(scene,camera)
+    window.requestAnimationFrame(tick)
+    
+}
+tick()
