@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import gsap from 'gsap'
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js'
 import './style.css'
+import { Geometry } from 'three'
 
 const sizes = {
     width:window.innerWidth, 
@@ -11,8 +12,6 @@ const sizes = {
 // Get Canvas DOM
 const canvas = document.querySelector('.webgl-canvas')
 
-
-
 // Scene
 const scene = new THREE.Scene()
 
@@ -20,16 +19,33 @@ const scene = new THREE.Scene()
 const group = new THREE.Group()
 scene.add(group)
 
-// Grometry (x, y, z) Mesh Material
-const geometry = new THREE.BoxGeometry(1,1,1)
-const material1 = new THREE.MeshBasicMaterial({color:0xff0000})
-const material2 = new THREE.MeshBasicMaterial({color:0x00ff00})
-const mesh1 = new THREE.Mesh(geometry,material1)
-const mesh2 = new THREE.Mesh(geometry,material2)
-mesh2.position.set(2,0,0)
-group.add(mesh1)
-group.add(mesh2)
+// Grometry
+// const grometry = new THREE.Geometry()
 
+// const vertex1 = new THREE.Vector3(0,0,0)
+// grometry.vertices.push(vertex1)
+// const vertex2 = new THREE.Vector3(0,1,0)
+// grometry.vertices.push(vertex2)
+// const vertex3 = new THREE.Vector3(1,0,0)
+// grometry.vertices.push(vertex3)
+
+// const face = new THREE.Face3(0,1,2)
+// grometry.faces.push(face)
+
+// group.add(new THREE.Mesh(grometry,new THREE.MeshBasicMaterial({color:0x00ff00, wireframe:false})))
+
+// Buffer grometry
+// const positionsArray = new Float32Array([
+//     0,0,0,
+//     0,1,0,
+//     1,0,0
+// ])
+// const positionsAttributes = new THREE.BufferAttribute(positionsArray,3)
+// const grometry = new THREE.BufferGeometry()
+// grometry.setAttribute('position', positionsAttributes)
+// group.add(new THREE.Mesh(grometry,new THREE.MeshBasicMaterial({color:0xff0000, wireframe:true})));
+
+group.add(new THREE.Mesh(new THREE.BoxGeometry(1,1,1,2,2,2),new THREE.MeshBasicMaterial({color:0xff0000, wireframe:true})));
 
 
 // Camera
