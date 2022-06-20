@@ -3,24 +3,15 @@ import gsap from 'gsap'
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js'
 import './style.css'
 
-
 const sizes = {
-    width:800, 
-    height:600
+    width:window.innerWidth, 
+    height:window.innerHeight
 }
-
-// Cursor
-const cursor ={
-    x:0,
-    y:0
-}
-window.addEventListener('mousemove',(event)=>{
-    cursor.x = event.clientX / sizes.width -0.5
-    cursor.y = -(event.clientY / sizes.height -0.5)
-})
 
 // Get Canvas DOM
 const canvas = document.querySelector('.webgl-canvas')
+
+
 
 // Scene
 const scene = new THREE.Scene()
@@ -35,27 +26,16 @@ const material1 = new THREE.MeshBasicMaterial({color:0xff0000})
 const material2 = new THREE.MeshBasicMaterial({color:0x00ff00})
 const mesh1 = new THREE.Mesh(geometry,material1)
 const mesh2 = new THREE.Mesh(geometry,material2)
-mesh2.position.set(2,-1,0)
+mesh2.position.set(2,0,0)
 group.add(mesh1)
 group.add(mesh2)
 
-// changing position, scale, rotation, lookAT, reOrder, group
-group.position.set(0.7,-0.6,0)
-group.scale.x=2
 
-group.rotation.x=Math.PI / 4
-group.rotation.y=Math.PI / 4
 
-// Camera = PerspectiveCamera(Field_of_view, screen_width/height) Types, Orthographic Camera, Custom Controls, Damping
+// Camera
 const camera = new THREE.PerspectiveCamera(75,sizes.width/sizes.height)
-// const aspectRatio = sizes.width /sizes.height
-// const camera = new THREE.OrthographicCamera(-1*aspectRatio, 1* aspectRatio,1,-1,0.1,1000)
-scene.add(camera)
-
-// Changing camera position
-// camera.position.x=1
-// camera.position.y=1
 camera.position.z=5
+scene.add(camera)
 
 // Controls
 const controls = new OrbitControls(camera,canvas)
@@ -66,7 +46,44 @@ controls.enableDamping = true
 const axesHelper =  new THREE.AxesHelper(5);
 scene.add(axesHelper)
 
-// camera.lookAt(group.position)
+window.addEventListener('resize',()=>{
+    console.log('resizing')
+    sizes.width = window.innerWidth
+    sizes.height = window.innerHeight
+
+    // Update camera
+    camera.aspect = sizes.width/sizes.height
+    camera.updateProjectionMatrix()
+
+    renderer.setSize(sizes.width,sizes.height)
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio,2))
+})
+
+// full screen
+window.addEventListener('dblclick',()=>{
+    const fullscreenElement = document.fullscreenElement || document.webkitFullscreenElement
+    if(!fullscreenElement){
+        if(canvas.requestFullscreen)
+        {
+            canvas.requestFullscreen()
+        }
+        else if(canvas.webkitRequestFullscreen)
+        {
+            canvas.webkitRequestFullscreen()
+        }
+    }
+    else{
+        if(document.exitFullscreen)
+        {
+            document.exitFullscreen()
+        }
+        else if(canvas.webkitExitFullscreen)
+        {
+            canvas.webkitExitFullscreen()
+        }
+    }
+
+})
 
 // Renderer
 const renderer = new THREE.WebGLRenderer({
@@ -74,21 +91,10 @@ const renderer = new THREE.WebGLRenderer({
 })
 // resize renderer
 renderer.setSize(sizes.width,sizes.height)
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2))
 
-gsap.to(group.position,{duration:1, delay: 1, x:2})
-gsap.to(group.position,{duration:1, delay: 2, y:0})
-
-// const clock = new THREE.Clock()
-// Animations - tick, requestAnimationFrame, deltaTime, GSAP
 const tick = ()=>{
-    // Clock
-    // const elaspedTime = clock.getElapsedTime()
-    // camera.position.set(cursor.x,cursor.y,2)
-    // 1 rev per sec
-    // group.rotation.y=elaspedTime * Math.PI * 2
-    // group.position.x = Math.cos(elaspedTime)
-    // group.position.y = Math.sin(elaspedTime)
-    // camera.lookAt(group.position)
+
     controls.update()
     renderer.render(scene,camera)
     window.requestAnimationFrame(tick)
