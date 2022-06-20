@@ -1,14 +1,26 @@
 import * as THREE from 'three'
-import gsap from 'gsap'
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js'
 import './style.css'
-import { Geometry } from 'three'
+import gsap from 'gsap'
+import * as dat from 'dat.gui'
+import { Material } from 'three'
+
+// dat gui, tweek types, 
+const gui = new dat.GUI({closed:true, width:400})
+// gui.hide()
+const parameters ={
+    color:0xfff000,
+    spin:()=>{
+        gsap.to(group.rotation,{duration:1,y:group.rotation.y+Math.PI*2})
+    }
+}
+
 
 const sizes = {
     width:window.innerWidth, 
     height:window.innerHeight
 }
-
+ 
 // Get Canvas DOM
 const canvas = document.querySelector('.webgl-canvas')
 
@@ -44,8 +56,8 @@ scene.add(group)
 // const grometry = new THREE.BufferGeometry()
 // grometry.setAttribute('position', positionsAttributes)
 // group.add(new THREE.Mesh(grometry,new THREE.MeshBasicMaterial({color:0xff0000, wireframe:true})));
-
-group.add(new THREE.Mesh(new THREE.BoxGeometry(1,1,1,2,2,2),new THREE.MeshBasicMaterial({color:0xff0000, wireframe:true})));
+const mat = new THREE.MeshBasicMaterial({color:parameters.color, wireframe:false})
+group.add(new THREE.Mesh(new THREE.BoxGeometry(1,1,1,2,2,2),mat));
 
 
 // Camera
@@ -63,7 +75,6 @@ const axesHelper =  new THREE.AxesHelper(5);
 scene.add(axesHelper)
 
 window.addEventListener('resize',()=>{
-    console.log('resizing')
     sizes.width = window.innerWidth
     sizes.height = window.innerHeight
 
@@ -100,6 +111,15 @@ window.addEventListener('dblclick',()=>{
     }
 
 })
+
+// gui tweeks
+gui.add(group.position, 'x' ) // brings text
+gui.add(group.position, 'y' ,-3,3,0.01) // brings range
+gui.add(group.position, 'z').min(-3).max(3).step(0.01).name('zoom')  // brings range with name
+gui.add(group,'visible') // boolean/checkbox
+gui.add(axesHelper,'visible') // boolean/checkbox
+gui.addColor(parameters,'color').onChange(()=>{mat.color.set(parameters.color)}) // colour
+gui.add(parameters,'spin')
 
 // Renderer
 const renderer = new THREE.WebGLRenderer({
