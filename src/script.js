@@ -3,23 +3,56 @@ import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js'
 import './style.css'
 import gsap from 'gsap'
 import * as dat from 'dat.gui'
-import { Material } from 'three'
+import { TextureLoader } from 'three'
 
-// dat gui, tweek types, 
-const gui = new dat.GUI({closed:true, width:400})
-// gui.hide()
-const parameters ={
-    color:0xfff000,
-    spin:()=>{
-        gsap.to(group.rotation,{duration:1,y:group.rotation.y+Math.PI*2})
-    }
+// Testures
+const loadingManager = new THREE.LoadingManager()
+loadingManager.onStart =()=>{
+    console.log('onStart')
 }
+loadingManager.onLoad =()=>{
+    console.log('onLoad')
+}
+loadingManager.onProgress =()=>{
+    console.log('onProgress')
+}
+loadingManager.onError =()=>{
+    console.log('onError')
+}
+const textureLoader = new THREE.TextureLoader(loadingManager);
+const colorTexture = textureLoader.load('/textures/door/color.jpg')
+const alphaTexture = textureLoader.load('/textures/door/alpha.jpg')
+const heightTexture = textureLoader.load('/textures/door/height.jpg')
+const normalTexture = textureLoader.load('/textures/door/normal.jpg')
+const ambientOcclusionTexture = textureLoader.load('/textures/door/ambientOcclusion.jpg')
+const metalnessTexture = textureLoader.load('/textures/door/metalness.jpg')
+const roughnessTexture = textureLoader.load('/textures/door/roughness.jpg')
 
+colorTexture.repeat.x = 2
+colorTexture.repeat.y = 3
+colorTexture.wrapS = THREE.RepeatWrapping
+colorTexture.wrapT = THREE.RepeatWrapping
+colorTexture.offset.x = 0.5
+colorTexture.offset.y = 0.5
+colorTexture.rotation= Math.PI*0.25
+colorTexture.center.x=0.5
+colorTexture.center.y=0.5
 
 const sizes = {
     width:window.innerWidth, 
     height:window.innerHeight
 }
+
+const gui = new dat.GUI({closed:true, width:400})
+// gui.hide()
+const parameters ={
+    color:0xfff000,
+    spin:()=>{
+        gsap.to(mesh.rotation,{duration:1,y:mesh.rotation.y+Math.PI*2})
+    }
+}
+
+
  
 // Get Canvas DOM
 const canvas = document.querySelector('.webgl-canvas')
@@ -27,38 +60,11 @@ const canvas = document.querySelector('.webgl-canvas')
 // Scene
 const scene = new THREE.Scene()
 
-// Group
-const group = new THREE.Group()
-scene.add(group)
-
-// Grometry
-// const grometry = new THREE.Geometry()
-
-// const vertex1 = new THREE.Vector3(0,0,0)
-// grometry.vertices.push(vertex1)
-// const vertex2 = new THREE.Vector3(0,1,0)
-// grometry.vertices.push(vertex2)
-// const vertex3 = new THREE.Vector3(1,0,0)
-// grometry.vertices.push(vertex3)
-
-// const face = new THREE.Face3(0,1,2)
-// grometry.faces.push(face)
-
-// group.add(new THREE.Mesh(grometry,new THREE.MeshBasicMaterial({color:0x00ff00, wireframe:false})))
-
-// Buffer grometry
-// const positionsArray = new Float32Array([
-//     0,0,0,
-//     0,1,0,
-//     1,0,0
-// ])
-// const positionsAttributes = new THREE.BufferAttribute(positionsArray,3)
-// const grometry = new THREE.BufferGeometry()
-// grometry.setAttribute('position', positionsAttributes)
-// group.add(new THREE.Mesh(grometry,new THREE.MeshBasicMaterial({color:0xff0000, wireframe:true})));
-const mat = new THREE.MeshBasicMaterial({color:parameters.color, wireframe:false})
-group.add(new THREE.Mesh(new THREE.BoxGeometry(1,1,1,2,2,2),mat));
-
+// const mat = new THREE.MeshBasicMaterial({color:parameters.color, wireframe:false})
+const mat = new THREE.MeshBasicMaterial({map:colorTexture})
+const geo = new THREE.BoxGeometry(1,1,1)
+const mesh = new THREE.Mesh(geo,mat)
+scene.add(mesh);
 
 // Camera
 const camera = new THREE.PerspectiveCamera(75,sizes.width/sizes.height)
@@ -113,11 +119,11 @@ window.addEventListener('dblclick',()=>{
 })
 
 // gui tweeks
-gui.add(group.position, 'x' ) // brings text
-gui.add(group.position, 'y' ,-3,3,0.01) // brings range
-gui.add(group.position, 'z').min(-3).max(3).step(0.01).name('zoom')  // brings range with name
-gui.add(group,'visible') // boolean/checkbox
-gui.add(axesHelper,'visible') // boolean/checkbox
+gui.add(mesh.position, 'x' ) // brings text
+gui.add(mesh.position, 'y' ,-3,3,0.01) // brings range
+gui.add(mesh.position, 'z').min(-3).max(3).step(0.01).name('zoom')  // brings range with name
+gui.add(mesh,'visible').name("Mesh Visible") // boolean/checkbox
+gui.add(axesHelper,'visible').name("Axes Helper Visible") // boolean/checkbox
 gui.addColor(parameters,'color').onChange(()=>{mat.color.set(parameters.color)}) // colour
 gui.add(parameters,'spin')
 
