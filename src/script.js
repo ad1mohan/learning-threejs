@@ -1,156 +1,166 @@
-import * as THREE from 'three'
-import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js'
-import './style.css'
-import gsap from 'gsap'
-import * as dat from 'dat.gui'
-import { TextureLoader } from 'three'
+import * as THREE from "three";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { RectAreaLightHelper } from "three/examples/jsm/helpers/RectAreaLightHelper";
+import { PointerLockControls } from "three/examples/jsm/controls/PointerLockControls.js";
+import * as dat from "dat.gui";
+import "./style.css";
+let camera, scene, renderer, controls;
+let planeMesh, boxMesh, sphereMesh, torousMesh;
+let standardMaterial;
 
-// Fonts
+let ambientLight, ambientLightHelper;
+let hemisphereLight, hemisphereLightHelper;
+let directionalLight, directionalLightHelper;
+let pointLight, pointLightHelper;
+let rectAreaLight, rectAreaLightHelper;
+let spotLight, spotLightHelper;
+const objects = [];
 
-// Screen Size
-const sizes = {
-    width:window.innerWidth, 
-    height:window.innerHeight
+let raycaster;
+
+let moveForward = false;
+let moveBackward = false;
+let moveLeft = false;
+let moveRight = false;
+let canJump = false;
+
+let prevTime = performance.now();
+const velocity = new THREE.Vector3();
+const direction = new THREE.Vector3();
+const vertex = new THREE.Vector3();
+const color = new THREE.Color();
+
+init();
+animate();
+
+function init() {
+	// Camera
+	camera = new THREE.PerspectiveCamera(
+		60,
+		window.innerWidth / window.innerHeight,
+		0.1,
+		1000
+	);
+	camera.position.y = 1.5;
+	camera.position.z = 6;
+
+	// Scene
+	scene = new THREE.Scene();
+	scene.background = new THREE.Color(0x000000);
+
+	// Ambient Light
+	ambientLight = new THREE.AmbientLight(0x404040); // soft white light
+	// scene.add(ambientLight);
+
+	// Hemisphere Lights
+	hemisphereLight = new THREE.HemisphereLight(0xff0000, 0x0000ff, 0.3);
+	hemisphereLightHelper = new THREE.HemisphereLightHelper(hemisphereLight, 1);
+	hemisphereLight.position.set(2.5, 1, 0.75);
+	scene.add(hemisphereLight, hemisphereLightHelper);
+
+	// Directional Lights
+	directionalLight = new THREE.DirectionalLight(0x00fffc, 0.5);
+	directionalLight.position.set(-1.335, 5, -0.035);
+	directionalLightHelper = new THREE.DirectionalLightHelper(
+		directionalLight,
+		1
+	);
+	scene.add(directionalLight, directionalLightHelper);
+
+	// Point Light
+	pointLight = new THREE.PointLight(0xff9000, 0.5, 4.5, 1);
+	pointLightHelper = new THREE.PointLightHelper(pointLight, 0.2);
+	pointLight.position.set(2, 1, 2);
+	scene.add(pointLight, pointLightHelper);
+
+	// Rect area light
+
+	rectAreaLight = new THREE.RectAreaLight(0x4e00ff, 5, 1, 1);
+	rectAreaLightHelper = new RectAreaLightHelper(rectAreaLight);
+	rectAreaLight.position.set(-1.5, 0, 1.5);
+	rectAreaLight.lookAt(0, 0, 0);
+	rectAreaLight.add(rectAreaLightHelper);
+	scene.add(rectAreaLight);
+
+	// Spot Light
+	spotLight = new THREE.SpotLight(0x78ff00, 0.5, 10, Math.PI * 0.1, 0.25, 1);
+	spotLightHelper = new THREE.SpotLightHelper(spotLight);
+	spotLight.position.set(0, 2, 3);
+	spotLight.target.position.x = -0.75;
+	scene.add(spotLight, spotLight.target, spotLightHelper);
+
+	// Material
+	standardMaterial = new THREE.MeshStandardMaterial();
+
+	// Meshes
+	planeMesh = new THREE.Mesh(
+		new THREE.PlaneBufferGeometry(6, 6),
+		standardMaterial
+	);
+	boxMesh = new THREE.Mesh(
+		new THREE.BoxBufferGeometry(1, 1, 1),
+		standardMaterial
+	);
+	sphereMesh = new THREE.Mesh(
+		new THREE.SphereBufferGeometry(0.6, 16, 32),
+		standardMaterial
+	);
+	torousMesh = new THREE.Mesh(
+		new THREE.TorusKnotGeometry(0.5, 0.2, 64, 8),
+		standardMaterial
+	);
+	torousMesh.position.set(-2, 1, 0);
+	sphereMesh.position.set(2, 1, 0);
+	boxMesh.position.set(0, 1, 0);
+	planeMesh.rotation.x = -Math.PI / 2;
+	scene.add(planeMesh, boxMesh, sphereMesh, torousMesh);
+
+	controls = new OrbitControls(camera, document.body);
+	controls.enableDamping = true;
+
+	renderer = new THREE.WebGLRenderer({ antialias: true });
+	renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+	renderer.setSize(window.innerWidth, window.innerHeight);
+	document.body.appendChild(renderer.domElement);
+
+	//
+
+	window.addEventListener("resize", onWindowResize);
+
+	// GUI
+	const gui = new dat.GUI();
+	gui.hide();
+	gui
+		.add(ambientLight, "intensity")
+		.min(0)
+		.max(1)
+		.step(0.01)
+		.name("ambientLight intensity");
 }
-// full screen
-window.addEventListener('dblclick',()=>{
-    const fullscreenElement = document.fullscreenElement || document.webkitFullscreenElement
-    if(!fullscreenElement){
-        if(canvas.requestFullscreen)
-        {
-            canvas.requestFullscreen()
-        }
-        else if(canvas.webkitRequestFullscreen)
-        {
-            canvas.webkitRequestFullscreen()
-        }
-    }
-    else{
-        if(document.exitFullscreen)
-        {
-            document.exitFullscreen()
-        }
-        else if(canvas.webkitExitFullscreen)
-        {
-            canvas.webkitExitFullscreen()
-        }
-    }
 
-})
-window.addEventListener('resize',()=>{
-    sizes.width = window.innerWidth
-    sizes.height = window.innerHeight
+function onWindowResize() {
+	camera.aspect = window.innerWidth / window.innerHeight;
+	camera.updateProjectionMatrix();
 
-    // Update camera
-    camera.aspect = sizes.width/sizes.height
-    camera.updateProjectionMatrix()
-
-    renderer.setSize(sizes.width,sizes.height)
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio,2))
-})
-
-// fonts
-const fontLoader = new THREE.FontLoader()
-let text = null
-fontLoader.load(
-    '/fonts/helvetiker_regular.typeface.json',
-    (font)=>{
-        const textGrometry = new THREE.TextBufferGeometry(
-            'AD1MOHAN',
-            {
-                font,
-                size:0.5,
-                height:0.2,
-                curveSegments:12,
-                bavelEnabled:true,
-                bavelThickness:0.03,
-                bavelSize:0.02,
-                bavelOffset:0,
-                bavelSegments:5
-            }
-        )
-        textGrometry.center()
-        // textGrometry.computeBoundingBox()
-        // textGrometry.translate(
-        //     -textGrometry.boundingBox.max.x * 0.5,
-        //     -textGrometry.boundingBox.max.y * 0.5,
-        //     -textGrometry.boundingBox.max.z * 0.5
-        // )
-        const textMat = new THREE.MeshMatcapMaterial({matcap:matcapTexture})
-        text = new THREE.Mesh(textGrometry,textMat)
-        scene.add(text)
-    }
-    )
-
-// Gui
-const gui = new dat.GUI({closed:true, width:400})
-// gui.hide()
-const parameters ={
-    color:0xfff000,
-    spin:()=>{
-        gsap.to(text.rotation,{duration:1,y:text.rotation.y+Math.PI*2})
-    }
+	renderer.setSize(window.innerWidth, window.innerHeight);
+	renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 }
 
-// Get Canvas DOM
-const canvas = document.querySelector('.webgl-canvas')
+function animate() {
+	requestAnimationFrame(animate);
+	const time = performance.now();
 
-// Scene
-const scene = new THREE.Scene()
+	torousMesh.rotation.x += (Math.PI / 2) * 0.01;
+	torousMesh.rotation.y += (Math.PI / 2) * 0.01;
+	sphereMesh.rotation.x += (Math.PI / 2) * 0.01;
+	sphereMesh.rotation.y += (Math.PI / 2) * 0.01;
+	boxMesh.rotation.x += (Math.PI / 2) * 0.01;
+	boxMesh.rotation.y += (Math.PI / 2) * 0.01;
 
-// Geometry
-const mat = new THREE.MeshStandardMaterial()
-mat.metalness = 0.45
-mat.roughness = 0.45
-const cube = new THREE.Mesh(new THREE.BoxBufferGeometry(1,1,1),mat)
-cube.visible = false
-scene.add(cube);
+	controls.update();
+	spotLightHelper.update();
 
-// Lights
-const ambientLight = new THREE.AmbientLight(0xffffff,0.5)
-const pointLight = new THREE.PointLight(0xffffff,0.5)
-pointLight.x = 2
-pointLight.y = 3
-pointLight.z = 4
-// scene.add(ambientLight, pointLight)
+	prevTime = time;
 
-// Camera
-const camera = new THREE.PerspectiveCamera(75,sizes.width/sizes.height)
-camera.position.z=5
-scene.add(camera)
-
-// Controls
-const controls = new OrbitControls(camera,canvas)
-controls.enableDamping = true
-
-// Textures
-const textureLoader = new THREE.TextureLoader()
-const matcapTexture = textureLoader.load('/textures/matcaps/3.png')
-
-// Axis helper
-const axesHelper =  new THREE.AxesHelper(5);
-axesHelper.visible = false
-scene.add(axesHelper)
-
-// gui tweeks
-gui.add(axesHelper,'visible').name("Axes Helper Visible") // boolean/checkbox
-gui.add(parameters,'spin').name('Spin Cube')
-gui.add(mat ,'metalness').min(0).max(1).step(0.01).name('metalness')
-gui.add(mat ,'roughness').min(0).max(1).step(0.01).name('roughness')
-
-// Renderer
-const renderer = new THREE.WebGLRenderer({
-    canvas,
-})
-// resize renderer
-renderer.setSize(sizes.width,sizes.height)
-renderer.setPixelRatio(Math.min(window.devicePixelRatio,2))
-
-const clock = new THREE.Clock()
-const tick = ()=>{
-    const elaspedTime = clock.getElapsedTime()
-    controls.update()
-    renderer.render(scene,camera)
-    window.requestAnimationFrame(tick)
+	renderer.render(scene, camera);
 }
-tick()
