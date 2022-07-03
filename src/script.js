@@ -5,15 +5,19 @@ import { PointerLockControls } from "three/examples/jsm/controls/PointerLockCont
 import * as dat from "dat.gui";
 import "./style.css";
 let camera, scene, renderer, controls;
-let planeMesh, boxMesh, sphereMesh, torousMesh;
+let particles;
+let planeMesh, boxMesh, sphereMesh, torousMesh, sphereShadow;
 let standardMaterial;
 
 let ambientLight, ambientLightHelper;
 let hemisphereLight, hemisphereLightHelper;
-let directionalLight, directionalLightHelper;
-let pointLight, pointLightHelper;
+let directionalLight, directionalLightHelper, directionalLightCameraHelper;
+let pointLight, pointLightHelper, pointLightCameraHelper;
 let rectAreaLight, rectAreaLightHelper;
-let spotLight, spotLightHelper;
+let spotLight, spotLightHelper, spotLightCameraHelper;
+
+let textureLoader;
+
 const objects = [];
 
 let raycaster;
@@ -30,6 +34,8 @@ const direction = new THREE.Vector3();
 const vertex = new THREE.Vector3();
 const color = new THREE.Color();
 
+const clock = new THREE.Clock();
+
 init();
 animate();
 
@@ -43,77 +49,52 @@ function init() {
 	);
 	camera.position.y = 1.5;
 	camera.position.z = 6;
-
-	// Scene
+	camera.position.set(
+		-1.6705697237405037,
+		2.336577388813617,
+		2.929922862489118
+	);
 	scene = new THREE.Scene();
 	scene.background = new THREE.Color(0x000000);
 
+	// Texture Loader
+	textureLoader = new THREE.TextureLoader();
+
+	const bakedShadow = textureLoader.load("./textures/bakedShadow.jpg");
+	const simpleShadow = textureLoader.load("./textures/simpleShadow.jpg");
+	const particleTexture = textureLoader.load("./textures/particles/2.png");
+
 	// Ambient Light
 	ambientLight = new THREE.AmbientLight(0x404040); // soft white light
-	// scene.add(ambientLight);
+	scene.add(ambientLight);
 
-	// Hemisphere Lights
-	hemisphereLight = new THREE.HemisphereLight(0xff0000, 0x0000ff, 0.3);
-	hemisphereLightHelper = new THREE.HemisphereLightHelper(hemisphereLight, 1);
-	hemisphereLight.position.set(2.5, 1, 0.75);
-	scene.add(hemisphereLight, hemisphereLightHelper);
+	// parctiles
 
-	// Directional Lights
-	directionalLight = new THREE.DirectionalLight(0x00fffc, 0.5);
-	directionalLight.position.set(-1.335, 5, -0.035);
-	directionalLightHelper = new THREE.DirectionalLightHelper(
-		directionalLight,
-		1
-	);
-	scene.add(directionalLight, directionalLightHelper);
+	const geometry = new THREE.BufferGeometry();
+	const count = 500000;
+	const positions = new Float32Array(count * 3);
+	const colors = new Float32Array(count * 3);
+	for (let i = 0; i < count * 3; i++) {
+		positions[i] = (Math.random() - 0.5) * 10;
+		colors[i] = Math.random();
+	}
+	geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+	geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+	const material = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+	const particleMaterial = new THREE.PointsMaterial({
+		size: 0.02,
+		sizeAttenuation: true,
+	});
+	// particleMaterial.color = new THREE.Color("#ff88cc");
+	particleMaterial.transparent = true;
+	particleMaterial.alphaTest = 0.001;
+	particleMaterial.alphaMap = particleTexture;
+	particleMaterial.vertexColors = true;
+	particles = new THREE.Points(geometry, particleMaterial);
 
-	// Point Light
-	pointLight = new THREE.PointLight(0xff9000, 0.5, 4.5, 1);
-	pointLightHelper = new THREE.PointLightHelper(pointLight, 0.2);
-	pointLight.position.set(2, 1, 2);
-	scene.add(pointLight, pointLightHelper);
-
-	// Rect area light
-
-	rectAreaLight = new THREE.RectAreaLight(0x4e00ff, 5, 1, 1);
-	rectAreaLightHelper = new RectAreaLightHelper(rectAreaLight);
-	rectAreaLight.position.set(-1.5, 0, 1.5);
-	rectAreaLight.lookAt(0, 0, 0);
-	rectAreaLight.add(rectAreaLightHelper);
-	scene.add(rectAreaLight);
-
-	// Spot Light
-	spotLight = new THREE.SpotLight(0x78ff00, 0.5, 10, Math.PI * 0.1, 0.25, 1);
-	spotLightHelper = new THREE.SpotLightHelper(spotLight);
-	spotLight.position.set(0, 2, 3);
-	spotLight.target.position.x = -0.75;
-	scene.add(spotLight, spotLight.target, spotLightHelper);
-
-	// Material
-	standardMaterial = new THREE.MeshStandardMaterial();
-
-	// Meshes
-	planeMesh = new THREE.Mesh(
-		new THREE.PlaneBufferGeometry(6, 6),
-		standardMaterial
-	);
-	boxMesh = new THREE.Mesh(
-		new THREE.BoxBufferGeometry(1, 1, 1),
-		standardMaterial
-	);
-	sphereMesh = new THREE.Mesh(
-		new THREE.SphereBufferGeometry(0.6, 16, 32),
-		standardMaterial
-	);
-	torousMesh = new THREE.Mesh(
-		new THREE.TorusKnotGeometry(0.5, 0.2, 64, 8),
-		standardMaterial
-	);
-	torousMesh.position.set(-2, 1, 0);
-	sphereMesh.position.set(2, 1, 0);
-	boxMesh.position.set(0, 1, 0);
-	planeMesh.rotation.x = -Math.PI / 2;
-	scene.add(planeMesh, boxMesh, sphereMesh, torousMesh);
+	const particleGeometry = new THREE.SphereBufferGeometry(1, 32, 32);
+	const particleMesh = new THREE.Points(particleGeometry, particleMaterial);
+	scene.add(particles);
 
 	controls = new OrbitControls(camera, document.body);
 	controls.enableDamping = true;
@@ -121,6 +102,8 @@ function init() {
 	renderer = new THREE.WebGLRenderer({ antialias: true });
 	renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 	renderer.setSize(window.innerWidth, window.innerHeight);
+	renderer.shadowMap.enabled = true;
+	renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 	document.body.appendChild(renderer.domElement);
 
 	//
@@ -130,12 +113,6 @@ function init() {
 	// GUI
 	const gui = new dat.GUI();
 	gui.hide();
-	gui
-		.add(ambientLight, "intensity")
-		.min(0)
-		.max(1)
-		.step(0.01)
-		.name("ambientLight intensity");
 }
 
 function onWindowResize() {
@@ -149,16 +126,12 @@ function onWindowResize() {
 function animate() {
 	requestAnimationFrame(animate);
 	const time = performance.now();
-
-	torousMesh.rotation.x += (Math.PI / 2) * 0.01;
-	torousMesh.rotation.y += (Math.PI / 2) * 0.01;
-	sphereMesh.rotation.x += (Math.PI / 2) * 0.01;
-	sphereMesh.rotation.y += (Math.PI / 2) * 0.01;
-	boxMesh.rotation.x += (Math.PI / 2) * 0.01;
-	boxMesh.rotation.y += (Math.PI / 2) * 0.01;
+	const elaspedTime = clock.getElapsedTime();
+	particles.rotation.z = elaspedTime * Math.random();
+	particles.rotation.y = elaspedTime * 0.2;
+	particles.rotation.z = elaspedTime * 0.1;
 
 	controls.update();
-	spotLightHelper.update();
 
 	prevTime = time;
 
